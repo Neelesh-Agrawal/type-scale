@@ -185,10 +185,11 @@ const server = http.createServer(async (req, res) => {
   let urlPath = req.url.split('?')[0]; // strip querystring
   if (urlPath === '/') urlPath = '/index.html';
 
-  const filePath = path.join(__dirname, urlPath);
+  const filePath = path.join(__dirname, 'public', urlPath);
 
-  // Security: don't serve files outside project dir
-  if (!filePath.startsWith(__dirname)) {
+  // Security: don't serve files outside public/ dir
+  const publicDir = path.join(__dirname, 'public');
+  if (!filePath.startsWith(publicDir)) {
     res.writeHead(403);
     return res.end('Forbidden');
   }

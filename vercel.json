@@ -1,6 +1,5 @@
 {
-  "buildCommand": null,
-  "outputDirectory": ".",
+  "outputDirectory": "public",
   "functions": {
     "api/analyze.js": {
       "maxDuration": 30
