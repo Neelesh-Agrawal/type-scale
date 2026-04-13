@@ -66,9 +66,13 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // Parse body — Vercel may pre-parse JSON or leave it as a string
+  // Parse body — Vercel auto-parses JSON when Content-Type is application/json,
+  // but guard against edge cases (string body, null, undefined).
   let body;
   try {
+    if (!req.body) {
+      return res.status(400).json({ error: 'Empty request body' });
+    }
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   } catch {
     return res.status(400).json({ error: 'Invalid JSON body' });
