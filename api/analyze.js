@@ -1,37 +1,17 @@
 /**
  * api/analyze.js — Whyframe Module 02: Type Scale Builder
  *
- * Vercel Serverless Function.
+ * Vercel Serverless Function (CommonJS format — required by Vercel unless
+ * "type":"module" is set in package.json, which would break server.js).
+ *
  * Proxies requests from the frontend to the Groq API.
- * The GROQ_API_KEY is read from environment variables — never from the client.
+ * GROQ_API_KEY is read from Vercel environment variables — never from the client.
  *
  * Route: POST /api/analyze
- *
- * Expected request body:
- * {
- *   scale: [...],           // generated scale steps
- *   font: { name, xHeight, category },
- *   pairedFont: { name } | null,
- *   multiplierName: string, // e.g. "Perfect Fourth"
- *   platform: string,       // "Web" | "Mobile" | "Print"
- *   context: string         // user's project description
- * }
- *
- * Returns:
- * {
- *   xHeightNote: string,
- *   whyThisWorks: string,
- *   watchOutFor: string,
- *   pairingNote: string
- * }
  */
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
-
-// ─── Prompt Builders ──────────────────────────────────────────────────────────
+const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 
 function buildSystemPrompt() {
   return `You are a senior typography expert and design educator. 
@@ -65,10 +45,8 @@ Return this JSON:
 }`;
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
-
-export default async function handler(req, res) {
-  // CORS + method guard
+module.exports = async function handler(req, res) {
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -81,15 +59,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Read API key from environment (set in Vercel dashboard, never in client code)
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(500).json({
-      error: 'GROQ_API_KEY is not configured. Add it to your Vercel environment variables.',
+      error: 'GROQ_API_KEY is not configured. Add it in Vercel dashboard → Settings → Environment Variables.',
     });
   }
 
-  // Parse request body
+  // Parse body — Vercel may pre-parse JSON or leave it as a string
   let body;
   try {
     body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -97,17 +74,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
-  const { scale, font, pairedFont, multiplierName, platform, context } = body;
+  const { scale, font, pairedFont, multiplierName, platform, context } = body || {};
 
   if (!scale || !font || !multiplierName || !platform) {
     return res.status(400).json({ error: 'Missing required fields: scale, font, multiplierName, platform' });
   }
 
-  // Build prompts
   const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt({ scale, font, pairedFont, multiplierName, platform, context });
+  const userPrompt   = buildUserPrompt({ scale, font, pairedFont, multiplierName, platform, context });
 
-  // Call Groq
   let groqResponse;
   try {
     groqResponse = await fetch(GROQ_API_URL, {
@@ -120,7 +95,7 @@ export default async function handler(req, res) {
         model: GROQ_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
+          { role: 'user',   content: userPrompt   },
         ],
         temperature: 0.7,
         max_tokens: 800,
@@ -136,14 +111,13 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: `Groq error ${groqResponse.status}: ${errorBody}` });
   }
 
-  const groqData = await groqResponse.json();
+  const groqData   = await groqResponse.json();
   const rawContent = groqData?.choices?.[0]?.message?.content;
 
   if (!rawContent) {
     return res.status(502).json({ error: 'Empty response from Groq' });
   }
 
-  // Parse and validate JSON from model
   let parsed;
   try {
     parsed = JSON.parse(rawContent);
@@ -152,4 +126,4 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json(parsed);
-}
+};
