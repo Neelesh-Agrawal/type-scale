@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whyframe — Type Scale Builder</title>
+  <meta name="description" content="Whyframe Module 02: Build a modular type scale with AI-powered design reasoning. Understand why every typographic decision works — not just what it looks like." />
+
+  <!-- Preconnect to Google Fonts for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Inter + Space Mono always loaded (UI fonts) — full list injected by app.js -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Animated gradient background -->
+  <div class="app-bg" aria-hidden="true"></div>
+
+  <div class="app-wrap">
+
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <header class="site-header">
+      <div class="header-tagline">design reasoning engine</div>
+      <h1 class="header-title"><span>Whyframe</span></h1>
+      <p class="header-subtitle">Module 02 — Type Scale Builder</p>
+      <span class="header-module-tag">whyframe / type-scale / v1.0</span>
+    </header>
+
+    <!-- ── Main Layout ─────────────────────────────────────────────────────── -->
+    <main class="main-layout">
+
+      <!-- ── Left: Input Column ─────────────────────────────────────────── -->
+      <aside class="input-column">
+
+        <!-- Scale Parameters Card -->
+        <div class="card" id="scale-params-card">
+          <div class="card__title">
+            <span class="card__title-icon">⊕</span>
+            Scale Parameters
+          </div>
+
+          <!-- Base size -->
+          <div class="input-group">
+            <label class="label" for="base-slider">Base size</label>
+            <div class="input-row">
+              <input
+                id="base-slider"
+                type="range"
+                class="slider"
+                min="8"
+                max="24"
+                value="16"
+                step="1"
+                aria-label="Base font size in pixels"
+              />
+              <input
+                id="base-number"
+                type="number"
+                class="number-input"
+                min="8"
+                max="24"
+                value="16"
+                aria-label="Base font size value"
+              />
+            </div>
+          </div>
+
+          <!-- Multiplier -->
+          <div class="input-group">
+            <label class="label" for="multiplier-select">Scale ratio</label>
+            <select id="multiplier-select" class="select" aria-label="Modular scale ratio"></select>
+          </div>
+
+          <!-- Steps -->
+          <div class="input-group">
+            <label class="label">Steps</label>
+            <div class="steps-row">
+              <div class="steps-input-wrap">
+                <label class="label" for="steps-above">Above base</label>
+                <input
+                  id="steps-above"
+                  type="number"
+                  class="steps-number"
+                  min="1"
+                  max="6"
+                  value="3"
+                  aria-label="Number of steps above base"
+                />
+              </div>
+              <div class="steps-input-wrap">
+                <label class="label" for="steps-below">Below base</label>
+                <input
+                  id="steps-below"
+                  type="number"
+                  class="steps-number"
+                  min="1"
+                  max="3"
+                  value="2"
+                  aria-label="Number of steps below base"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fonts Card -->
+        <div class="card" id="fonts-card">
+          <div class="card__title">
+            <span class="card__title-icon">T</span>
+            Typography
+          </div>
+
+          <!-- Primary font -->
+          <div class="input-group">
+            <label class="label">Primary font</label>
+            <div class="font-search-wrap" id="font-search-wrap">
+              <div
+                class="font-selected-trigger"
+                id="font-selected"
+                role="combobox"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                tabindex="0"
+              >
+                Inter
+              </div>
+              <div class="font-search-dropdown" id="font-search-dropdown" role="listbox">
+                <input
+                  type="text"
+                  class="font-search-input"
+                  id="font-search"
+                  placeholder="Search fonts…"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <div class="font-list" id="font-dropdown"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Font weight -->
+          <div class="input-group">
+            <label class="label" for="weight-select">Font weight</label>
+            <select id="weight-select" class="select" aria-label="Font weight"></select>
+          </div>
+
+          <!-- Paired font -->
+          <div class="input-group">
+            <label class="label" for="paired-font-select">Pair with (body/caption)</label>
+            <select id="paired-font-select" class="select" aria-label="Optional paired font for body and caption steps"></select>
+          </div>
+        </div>
+
+        <!-- Context Card -->
+        <div class="card" id="context-card">
+          <div class="card__title">
+            <span class="card__title-icon">⌂</span>
+            Project Context
+          </div>
+
+          <!-- Platform -->
+          <div class="input-group">
+            <label class="label">Platform</label>
+            <div class="platform-group" role="group" aria-label="Target platform">
+              <button class="platform-btn active" data-platform="Web" id="platform-web">Web</button>
+              <button class="platform-btn" data-platform="Mobile" id="platform-mobile">Mobile</button>
+              <button class="platform-btn" data-platform="Print" id="platform-print">Print</button>
+            </div>
+          </div>
+
+          <!-- Project description -->
+          <div class="input-group">
+            <label class="label" for="context-input">Project mood + description</label>
+            <textarea
+              id="context-input"
+              class="textarea"
+              placeholder="e.g. A fintech dashboard, serious and trustworthy. Minimal, professional tone."
+              aria-label="Project context for AI reasoning"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <button class="btn-primary" id="generate-btn">Generate Scale</button>
+        <button class="btn-secondary" id="ai-btn">Get AI Reasoning</button>
+
+      </aside>
+
+      <!-- ── Right: Preview Column ───────────────────────────────────────── -->
+      <section class="preview-column">
+
+        <!-- Preview header -->
+        <div class="preview-header">
+          <span class="preview-label">Type Scale Preview</span>
+        </div>
+
+        <!-- Scale cards rendered by app.js -->
+        <div class="preview-grid" id="preview-grid" aria-live="polite" aria-label="Generated type scale preview"></div>
+
+        <!-- AI Reasoning Card (hidden until triggered) -->
+        <div class="ai-reasoning-card" id="ai-reasoning-card" aria-live="polite" aria-label="AI typography reasoning"></div>
+
+        <!-- Output / Copy Panel -->
+        <div class="output-panel" id="output-panel">
+          <div class="card__title">
+            <span class="card__title-icon">{ }</span>
+            Export
+          </div>
+          <div class="output-copy-row">
+            <button class="copy-btn" id="copy-css">Copy CSS Vars</button>
+            <button class="copy-btn" id="copy-tailwind">Copy Tailwind</button>
+            <button class="copy-btn" id="copy-figma">Copy Figma JSON</button>
+          </div>
+          <button class="btn-export-svg" id="export-svg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export as SVG — Drag into Figma
+          </button>
+          <pre class="output-code" id="output-preview" aria-label="Generated code output">Generate a scale to see export output.</pre>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- app.js is loaded as an ES module — imports scale.js, fonts.js, api.js -->
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>

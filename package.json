@@ -1,0 +1,13 @@
+{
+  "name": "whyframe-type-scale",
+  "version": "1.0.0",
+  "description": "Whyframe Module 02 — Modular type scale builder with AI reasoning",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
