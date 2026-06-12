@@ -106,13 +106,36 @@ export function getFontByName(name) {
 }
 
 /**
- * getGoogleFontsUrl — builds a single Google Fonts API URL for all googleFont: true entries
+ * getGoogleFontsUrl — builds a Google Fonts URL for specific font names (on-demand loading).
+ * @param {string[]} fontNames
  */
-export function getGoogleFontsUrl() {
-  const googleFonts = FONTS.filter((f) => f.googleFont);
-  const families = googleFonts.map((f) => {
-    const weightStr = f.weights.join(';');
-    return `family=${f.name.replace(/ /g, '+')}:wght@${weightStr}`;
-  });
+export function getGoogleFontsUrl(fontNames = ['Inter']) {
+  const unique = [...new Set(fontNames.filter(Boolean))];
+  const families = unique
+    .map((name) => getFontByName(name))
+    .filter((f) => f && f.googleFont)
+    .map((f) => {
+      const weightStr = f.weights.join(';');
+      return `family=${f.name.replace(/ /g, '+')}:wght@${weightStr}`;
+    });
+
+  if (!families.length) return null;
   return `https://fonts.googleapis.com/css2?${families.join('&')}&display=swap`;
+}
+
+const loadedFontUrls = new Set();
+
+/**
+ * loadGoogleFonts — injects a stylesheet link for the given fonts (deduped).
+ * @param {string[]} fontNames
+ */
+export function loadGoogleFonts(fontNames = []) {
+  const url = getGoogleFontsUrl(fontNames);
+  if (!url || loadedFontUrls.has(url)) return;
+  loadedFontUrls.add(url);
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = url;
+  document.head.appendChild(link);
 }

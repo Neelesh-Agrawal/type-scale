@@ -83,21 +83,22 @@ const TAG_DEFINITIONS = [
  * @returns {Array<ScaleStep>}
  */
 export function generateScale({ base = 16, multiplier = 1.333, stepsAbove = 3, stepsBelow = 2 }) {
-  const totalSteps = stepsAbove + 1 + stepsBelow; // +1 for base step
+  const clampedBase = Math.min(24, Math.max(8, base));
+  const clampedAbove = Math.min(6, Math.max(1, stepsAbove));
+  const clampedBelow = Math.min(3, Math.max(1, stepsBelow));
+  const baseIndex = clampedAbove;
 
-  // Build raw sizes from largest to smallest
+  // Build raw sizes from largest to smallest; index baseIndex is always the base size
   const sizes = [];
-  for (let i = stepsAbove; i >= -stepsBelow; i--) {
-    sizes.push(round2(base * Math.pow(multiplier, i)));
+  for (let i = clampedAbove; i >= -clampedBelow; i--) {
+    sizes.push(round2(clampedBase * Math.pow(multiplier, i)));
   }
 
-  // Assign tags: we have 8 defined tags, pick last N of them if totalSteps < 8
-  // Always ensure Body, Caption, Label are present (last 3)
-  const availableTags = TAG_DEFINITIONS.slice(Math.max(0, TAG_DEFINITIONS.length - totalSteps));
+  const tags = assignTags(clampedAbove, clampedBelow);
 
   return sizes.map((size, index) => {
-    const tag = availableTags[index] || TAG_DEFINITIONS[TAG_DEFINITIONS.length - 1];
-    const rem = `${round2(size / 16)}rem`;
+    const tag = tags[index] || TAG_DEFINITIONS[TAG_DEFINITIONS.length - 1];
+    const rem = `${round2(size / clampedBase)}rem`;
 
     return {
       tag: tag.name,
@@ -107,9 +108,24 @@ export function generateScale({ base = 16, multiplier = 1.333, stepsAbove = 3, s
       letterSpacing: tag.letterSpacing,
       weight: tag.weight,
       sampleText: tag.sampleText,
-      isBase: index === stepsAbove, // mark which step is the base
+      isBase: index === baseIndex,
     };
   });
+}
+
+/**
+ * Maps scale steps to semantic tags with Body always at the base index.
+ */
+function assignTags(stepsAbove, stepsBelow) {
+  const bodyIndex = TAG_DEFINITIONS.findIndex((t) => t.name === 'Body');
+  const abovePool = TAG_DEFINITIONS.slice(0, bodyIndex);
+  const belowPool = TAG_DEFINITIONS.slice(bodyIndex + 1);
+
+  const aboveTags = abovePool.slice(Math.max(0, abovePool.length - stepsAbove));
+  const belowTags = belowPool.slice(0, stepsBelow);
+  const bodyTag = TAG_DEFINITIONS[bodyIndex];
+
+  return [...aboveTags, bodyTag, ...belowTags];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

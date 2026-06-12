@@ -74,8 +74,12 @@ async function handleAnalyze(body, res) {
   }
 
   const { scale, font, pairedFont, multiplierName, platform, context } = parsed;
-  if (!scale || !font || !multiplierName || !platform) {
+  if (!Array.isArray(scale) || scale.length === 0 || !font || !multiplierName || !platform) {
     return jsonResponse(res, 400, { error: 'Missing required fields' });
+  }
+
+  if (scale.length > 12) {
+    return jsonResponse(res, 400, { error: 'Scale has too many steps (max 12)' });
   }
 
   const scaleSummary = scale
@@ -152,11 +156,23 @@ function jsonResponse(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
+const MAX_BODY_BYTES = 64 * 1024;
+
 function readBody(req) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (chunk) => (body += chunk));
+    let size = 0;
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        reject(new Error('Request body too large'));
+        req.destroy();
+        return;
+      }
+      body += chunk;
+    });
     req.on('end', () => resolve(body));
+    req.on('error', reject);
   });
 }
 
@@ -177,19 +193,24 @@ const server = http.createServer(async (req, res) => {
 
   // ── API route ────────────────────────────────────────────────────────────────
   if (req.url === '/api/analyze' && req.method === 'POST') {
-    const body = await readBody(req);
-    return handleAnalyze(body, res);
+    try {
+      const body = await readBody(req);
+      return handleAnalyze(body, res);
+    } catch (err) {
+      return jsonResponse(res, 413, { error: err.message || 'Request too large' });
+    }
   }
 
   // ── Static files ─────────────────────────────────────────────────────────────
   let urlPath = req.url.split('?')[0]; // strip querystring
   if (urlPath === '/') urlPath = '/index.html';
 
-  const filePath = path.join(__dirname, 'public', urlPath);
-
-  // Security: don't serve files outside public/ dir
   const publicDir = path.join(__dirname, 'public');
-  if (!filePath.startsWith(publicDir)) {
+  const filePath = path.resolve(publicDir, '.' + urlPath);
+
+  // Security: don't serve files outside public/ dir (normalized for Windows)
+  const resolvedPublic = path.resolve(publicDir);
+  if (!filePath.startsWith(resolvedPublic + path.sep) && filePath !== resolvedPublic) {
     res.writeHead(403);
     return res.end('Forbidden');
   }

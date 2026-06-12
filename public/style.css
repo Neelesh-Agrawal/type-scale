@@ -73,15 +73,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(
-    135deg,
-    #e0d4ff 0%,
-    #fde68a 30%,
-    #d1fae5 60%,
-    #ffffff 100%
-  );
-  background-size: 400% 400%;
-  animation: gradient-shift 12s ease infinite;
+  background: #f3eeff;
 }
 
 .app-wrap {
@@ -1063,12 +1055,6 @@ body {
 }
 
 /* ─── 14. Animations ─────────────────────────────────────────────────────── */
-
-@keyframes gradient-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 
 @keyframes card-in {
   from {

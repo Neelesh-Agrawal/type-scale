@@ -13,7 +13,7 @@
  */
 
 import { generateScale, generateCSSVariables, generateTailwindConfig, generateFigmaTokens, generateSVG } from './scale.js';
-import { FONTS, getFontsByCategory, getFontByName, getGoogleFontsUrl } from './fonts.js';
+import { FONTS, getFontsByCategory, getFontByName, loadGoogleFonts } from './fonts.js';
 import { getAIReasoning } from './api.js';
 
 // ─── Named Multipliers ────────────────────────────────────────────────────────
@@ -51,11 +51,8 @@ const els = {};
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Inject Google Fonts dynamically
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = getGoogleFontsUrl();
-  document.head.appendChild(link);
+  // Load only the default primary font (not the full 70+ font library)
+  loadGoogleFonts([state.primaryFont.name]);
 
   cacheElements();
   populateFontSelectors();
@@ -161,11 +158,13 @@ function attachEventListeners() {
   els.baseSlider.addEventListener('input', () => {
     state.base = parseInt(els.baseSlider.value, 10);
     els.baseNumber.value = state.base;
+    scheduleRegenerate();
   });
   els.baseNumber.addEventListener('input', () => {
     const v = Math.min(24, Math.max(8, parseInt(els.baseNumber.value, 10) || 16));
     state.base = v;
     els.baseSlider.value = v;
+    scheduleRegenerate();
   });
 
   // Multiplier
@@ -173,20 +172,32 @@ function attachEventListeners() {
     state.multiplier = parseFloat(els.multiplierSel.value);
     const match = MULTIPLIERS.find((m) => m.value === state.multiplier);
     state.multiplierName = match ? match.name : `${state.multiplier}`;
+    scheduleRegenerate();
   });
 
   // Steps
   els.stepsAbove.addEventListener('input', () => {
-    state.stepsAbove = parseInt(els.stepsAbove.value, 10);
+    state.stepsAbove = clampSteps(els.stepsAbove.value, 1, 6);
+    els.stepsAbove.value = state.stepsAbove;
+    scheduleRegenerate();
   });
   els.stepsBelow.addEventListener('input', () => {
-    state.stepsBelow = parseInt(els.stepsBelow.value, 10);
+    state.stepsBelow = clampSteps(els.stepsBelow.value, 1, 3);
+    els.stepsBelow.value = state.stepsBelow;
+    scheduleRegenerate();
   });
 
   // Font search + dropdown
   els.fontSelected.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleFontDropdown();
+  });
+  els.fontSelected.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleFontDropdown();
+    }
+    if (e.key === 'Escape') closeFontDropdown();
   });
   els.fontSearch.addEventListener('input', () => {
     filterFontDropdown(els.fontSearch.value);
@@ -205,12 +216,15 @@ function attachEventListeners() {
   // Weight
   els.weightSel.addEventListener('change', () => {
     state.weight = parseInt(els.weightSel.value, 10);
+    scheduleRegenerate();
   });
 
   // Paired font
   els.pairedFontSel.addEventListener('change', () => {
     const name = els.pairedFontSel.value;
     state.pairedFont = name ? getFontByName(name) : null;
+    if (state.pairedFont) loadGoogleFonts([state.pairedFont.name]);
+    scheduleRegenerate();
   });
 
   // Platform buttons
@@ -251,6 +265,7 @@ function toggleFontDropdown() {
 
 function openFontDropdown() {
   els.fontSearchWrap.classList.add('open');
+  els.fontSelected.setAttribute('aria-expanded', 'true');
   els.fontSearch.value = '';
   filterFontDropdown('');
   els.fontSearch.focus();
@@ -258,6 +273,7 @@ function openFontDropdown() {
 
 function closeFontDropdown() {
   els.fontSearchWrap.classList.remove('open');
+  els.fontSelected.setAttribute('aria-expanded', 'false');
 }
 
 function filterFontDropdown(query) {
@@ -289,8 +305,50 @@ function selectFont(name) {
   state.primaryFont = font;
   els.fontSelected.textContent = name;
   els.fontSelected.style.fontFamily = `'${name}', sans-serif`;
+  loadGoogleFonts([name]);
   closeFontDropdown();
   populateWeightSelector();
+  scheduleRegenerate();
+}
+
+let regenerateTimer;
+function scheduleRegenerate() {
+  clearTimeout(regenerateTimer);
+  regenerateTimer = setTimeout(handleGenerateScale, 200);
+}
+
+function clampSteps(value, min, max) {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function usesPairedFont(tag) {
+  return ['Body', 'Caption', 'Label', 'Overline'].includes(tag);
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
 }
 
 // ─── Generate Scale ───────────────────────────────────────────────────────────
@@ -302,6 +360,10 @@ function handleGenerateScale() {
     stepsAbove: state.stepsAbove,
     stepsBelow: state.stepsBelow,
   });
+
+  // Apply selected weight to the base (Body) step
+  const baseStep = state.scale.find((s) => s.isBase);
+  if (baseStep) baseStep.weight = state.weight;
 
   renderPreviewCards();
   updateOutputPreview();
@@ -320,7 +382,7 @@ function renderPreviewCards() {
     const card = document.createElement('div');
     card.className = `scale-card${step.isBase ? ' scale-card--base' : ''}`;
 
-    const pairedFontFamily = state.pairedFont && ['Caption', 'Label', 'Overline'].includes(step.tag)
+    const pairedFontFamily = state.pairedFont && usesPairedFont(step.tag)
       ? `'${state.pairedFont.name}', sans-serif`
       : `'${state.primaryFont.name}', sans-serif`;
 
@@ -392,7 +454,7 @@ async function handleAIReasoning() {
     els.aiCard.innerHTML = `
       <div class="ai-error">
         <span class="ai-error__icon">⚠️</span>
-        <p>${err.message}</p>
+        <p>${escapeHtml(err.message)}</p>
         <small>Make sure your GROQ_API_KEY is set in your .env file and you're running via Vercel dev or deployed.</small>
       </div>
     `;
@@ -412,19 +474,19 @@ function renderAICard(result) {
     <div class="ai-card__sections">
       <div class="ai-section">
         <div class="ai-section__label">X-Height Note</div>
-        <p class="ai-section__text">${result.xHeightNote}</p>
+        <p class="ai-section__text">${escapeHtml(result.xHeightNote)}</p>
       </div>
       <div class="ai-section">
         <div class="ai-section__label">Why This Scale Works</div>
-        <p class="ai-section__text">${result.whyThisWorks}</p>
+        <p class="ai-section__text">${escapeHtml(result.whyThisWorks)}</p>
       </div>
       <div class="ai-section ai-section--warning">
         <div class="ai-section__label">Watch Out For</div>
-        <p class="ai-section__text">${result.watchOutFor}</p>
+        <p class="ai-section__text">${escapeHtml(result.watchOutFor)}</p>
       </div>
       <div class="ai-section">
         <div class="ai-section__label">Pairing Note</div>
-        <p class="ai-section__text">${result.pairingNote}</p>
+        <p class="ai-section__text">${escapeHtml(result.pairingNote)}</p>
       </div>
     </div>
   `;
@@ -464,16 +526,18 @@ function copyOutput(type) {
   }
 
   showOutputTab(type, text);
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = btnMap[type];
-    const original = btn.textContent;
-    btn.textContent = '✓ Copied!';
-    btn.classList.add('btn--copied');
-    setTimeout(() => {
-      btn.textContent = original;
-      btn.classList.remove('btn--copied');
-    }, 2000);
-  });
+  copyToClipboard(text)
+    .then(() => {
+      const btn = btnMap[type];
+      const original = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('btn--copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('btn--copied');
+      }, 2000);
+    })
+    .catch(() => showToast('Copy failed — select the code and copy manually.'));
 }
 
 function showOutputTab(type, text) {

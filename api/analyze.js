@@ -80,8 +80,12 @@ module.exports = async function handler(req, res) {
 
   const { scale, font, pairedFont, multiplierName, platform, context } = body || {};
 
-  if (!scale || !font || !multiplierName || !platform) {
+  if (!Array.isArray(scale) || scale.length === 0 || !font || !multiplierName || !platform) {
     return res.status(400).json({ error: 'Missing required fields: scale, font, multiplierName, platform' });
+  }
+
+  if (scale.length > 12) {
+    return res.status(400).json({ error: 'Scale has too many steps (max 12)' });
   }
 
   const systemPrompt = buildSystemPrompt();
