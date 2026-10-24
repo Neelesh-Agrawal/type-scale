@@ -11,7 +11,7 @@
  */
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+const GROQ_MODEL   = 'openai/gpt-oss-120b';
 
 function buildSystemPrompt() {
   return `You are a senior typography expert and design educator. 
@@ -101,6 +101,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: GROQ_MODEL,
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userPrompt   },

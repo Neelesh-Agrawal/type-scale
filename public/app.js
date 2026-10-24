@@ -469,7 +469,7 @@ function renderAICard(result) {
     <div class="ai-card__header">
       <span class="ai-card__icon">✦</span>
       <h3 class="ai-card__title">AI Type Reasoning</h3>
-      <span class="ai-card__model">llama-3.3-70b · Groq</span>
+      <span class="ai-card__model">GPT-OSS 120B · Groq</span>
     </div>
     <div class="ai-card__sections">
       <div class="ai-section">
